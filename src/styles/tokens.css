@@ -1,0 +1,25 @@
+/* Brand tokens: navy blue + teal/cyan. Replace with the official Biocode hex codes when received.
+   Values are space-separated RGB so Tailwind opacity utilities work. */
+:root {
+  --primary: 14 116 144;      /* #0E7490 teal-cyan: links, buttons (AA contrast on white) */
+  --secondary: 11 31 77;       /* #0B1F4D official BioCode navy */
+  --accent: 34 211 238;       /* #22D3EE bright cyan: highlights on navy backgrounds */
+  --bg: 255 255 255;
+  --surface: 241 246 250;     /* cool pale blue for cards and panels */
+  --text: 15 27 45;
+  --muted: 84 99 120;
+  --line: 218 227 237;
+  --success: 22 128 80;
+}
+
+:root[data-theme="dark"] {
+  --primary: 34 211 238;
+  --secondary: 11 31 77;
+  --accent: 34 211 238;
+  --bg: 8 17 32;
+  --surface: 14 28 50;
+  --text: 232 238 246;
+  --muted: 156 170 190;
+  --line: 32 50 78;
+  --success: 74 222 128;
+}
