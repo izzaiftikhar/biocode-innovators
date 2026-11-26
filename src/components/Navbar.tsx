@@ -1,10 +1,27 @@
+﻿
 "use client";
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import {
+  Award,
+  Bell,
+  BookOpen,
+  Briefcase,
+  FlaskConical,
+  GraduationCap,
+  HelpCircle,
+  Info,
+  Mail,
+  MessageSquare,
+  Users,
+  UserRound,
+  type LucideIcon,
+} from "lucide-react";
 import AuthButton from "./AuthButton";
+import { createBrowserSupabase } from "@/lib/supabase/client";
 
 const primary = [
   { href: "/about", label: "About" },
@@ -23,48 +40,67 @@ const more = [
   { href: "/contact", label: "Contact" },
 ];
 
-const allLinks = [...primary, ...more];
+type MobileLink = {
+  href: string;
+  label: string;
+  icon: LucideIcon;
+};
 
-const iconPaths = [
-  "M12 3l8 6v12H4V9l8-6z M9 21v-8h6v8",
-  "M12 3v18 M3 12h18 M5.6 5.6l12.8 12.8 M18.4 5.6L5.6 18.4",
-  "M4 5h16v14H4z M8 9h8 M8 13h8 M8 17h5",
-  "M12 3l2.5 5.5L20 11l-5.5 2.5L12 19l-2.5-5.5L4 11l5.5-2.5L12 3z",
-  "M4 4h16v16H4z M8 8h8 M8 12h8 M8 16h5",
-  "M4 5h16v14H4z M8 9h8 M8 13h5",
-  "M12 3a9 9 0 1 0 9 9 M12 7v5l4 2",
-  "M4 5h16v14H4z M8 9h8 M8 13h8 M8 17h4",
-  "M12 3l2 6 6 2-6 2-2 6-2-6-6-2 6-2 2-6z",
-  "M4 5h16v14H4z M8 9h8 M8 13h8",
-  "M4 6h16 M4 12h16 M4 18h16",
+const mobileGroups: { title: string; links: MobileLink[] }[] = [
+  {
+    title: "Programs & Academics",
+    links: [
+      { href: "/courses", label: "Courses", icon: GraduationCap },
+      { href: "/research", label: "Research", icon: FlaskConical },
+      { href: "/fellowship", label: "Fellowship", icon: Award },
+      { href: "/internships", label: "Internships", icon: Briefcase },
+      { href: "/student-journal", label: "Student Journal", icon: BookOpen },
+    ],
+  },
+  {
+    title: "Community & Updates",
+    links: [
+      { href: "/community", label: "Community", icon: Users },
+      { href: "/updates", label: "Updates", icon: Bell },
+    ],
+  },
+  {
+    title: "Help & Info",
+    links: [
+      { href: "/about", label: "About", icon: Info },
+      { href: "/faq", label: "FAQs", icon: HelpCircle },
+      { href: "/feedback", label: "Feedback", icon: MessageSquare },
+      { href: "/contact", label: "Contact", icon: Mail },
+    ],
+  },
 ];
 
 function SearchIcon() {
   return (
-    <svg viewBox="0 0 24 24" width="18" height="18" fill="none"
-      stroke="currentColor" strokeWidth="2" strokeLinecap="round"
-      aria-hidden="true">
+    <svg
+      viewBox="0 0 24 24"
+      width="18"
+      height="18"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      aria-hidden="true"
+    >
       <circle cx="11" cy="11" r="7" />
       <path d="m20 20-3.5-3.5" />
     </svg>
   );
 }
 
-function NavIcon({ index }: { index: number }) {
-  return (
-    <svg viewBox="0 0 24 24" width="19" height="19" fill="none"
-      stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"
-      strokeLinejoin="round" aria-hidden="true">
-      <path d={iconPaths[index] || iconPaths[10]} />
-    </svg>
-  );
-}
-
 export default function Navbar() {
   const pathname = usePathname();
+
   const [mobileOpen, setMobileOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
   const moreRef = useRef<HTMLDivElement>(null);
 
   const isActive = (href: string) =>
@@ -72,17 +108,74 @@ export default function Navbar() {
 
   const moreActive = more.some((link) => isActive(link.href));
 
-  // The mobile menu is rendered into <body> (see the portal below), which
-  // only exists in the browser, so wait until the component has mounted.
+  // Track authentication state.
+  useEffect(() => {
+    const supabase = createBrowserSupabase();
+    let active = true;
+
+    supabase.auth.getUser().then(({ data }) => {
+      if (active) {
+        setIsLoggedIn(!!data.user);
+      }
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (active) {
+        setIsLoggedIn(!!session?.user);
+      }
+    });
+
+    return () => {
+      active = false;
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  // Desktop: Add Profile after Internships, immediately before More.
+  const visiblePrimary = isLoggedIn
+    ? [...primary, { href: "/profile", label: "Profile" }]
+    : primary;
+
+  // Mobile: Add Profile after Internships in Programs & Academics.
+  const visibleMobileGroups = mobileGroups.map((group) => {
+    if (!isLoggedIn || group.title !== "Programs & Academics") {
+      return group;
+    }
+
+    return {
+      ...group,
+      links: [
+        ...group.links,
+        {
+          href: "/profile",
+          label: "Profile",
+          icon: UserRound,
+        },
+      ],
+    };
+  });
+
+  // Running index of each group's first link for staggered animation.
+  const groupStarts = visibleMobileGroups.map((_, i) =>
+    visibleMobileGroups
+      .slice(0, i)
+      .reduce((sum, group) => sum + group.links.length, 0)
+  );
+
+  // Wait until mounted before rendering the mobile portal.
   useEffect(() => {
     setMounted(true);
   }, []);
 
+  // Close menus when navigating.
   useEffect(() => {
     setMobileOpen(false);
     setMoreOpen(false);
   }, [pathname]);
 
+  // Close More dropdown when clicking outside or pressing Escape.
   useEffect(() => {
     if (!moreOpen) return;
 
@@ -93,7 +186,9 @@ export default function Navbar() {
     };
 
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setMoreOpen(false);
+      if (event.key === "Escape") {
+        setMoreOpen(false);
+      }
     };
 
     document.addEventListener("mousedown", onClick);
@@ -105,7 +200,7 @@ export default function Navbar() {
     };
   }, [moreOpen]);
 
-  // Lock background scrolling while the mobile/tablet drawer is open.
+  // Lock background scrolling while mobile/tablet drawer is open.
   useEffect(() => {
     if (!mobileOpen) return;
 
@@ -113,7 +208,9 @@ export default function Navbar() {
     document.body.style.overflow = "hidden";
 
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setMobileOpen(false);
+      if (event.key === "Escape") {
+        setMobileOpen(false);
+      }
     };
 
     document.addEventListener("keydown", onKey);
@@ -149,14 +246,15 @@ export default function Navbar() {
                 className="h-full w-full scale-[1.23] object-cover"
               />
             </span>
+
             <span>
               BioCode <span className="text-primary">Innovators</span>
             </span>
           </Link>
 
-          {/* Existing desktop navigation remains intact. */}
+          {/* Desktop navigation */}
           <nav aria-label="Main" className="hidden items-center gap-5 xl:flex">
-            {primary.map((link) => (
+            {visiblePrimary.map((link) => (
               <Link
                 key={link.href}
                 href={link.href}
@@ -167,6 +265,7 @@ export default function Navbar() {
               </Link>
             ))}
 
+            {/* More dropdown */}
             <div ref={moreRef} className="relative">
               <button
                 type="button"
@@ -176,6 +275,7 @@ export default function Navbar() {
                 className={`${linkClass(moreActive)} inline-flex items-center gap-1`}
               >
                 More
+
                 <svg
                   viewBox="0 0 20 20"
                   width="14"
@@ -184,7 +284,9 @@ export default function Navbar() {
                   stroke="currentColor"
                   strokeWidth="2"
                   strokeLinecap="round"
-                  className={`transition-transform ${moreOpen ? "rotate-180" : ""}`}
+                  className={`transition-transform ${
+                    moreOpen ? "rotate-180" : ""
+                  }`}
                   aria-hidden="true"
                 >
                   <path d="M5.5 7.5 10 12l4.5-4.5" />
@@ -200,7 +302,9 @@ export default function Navbar() {
                     <li key={link.href}>
                       <Link
                         href={link.href}
-                        aria-current={isActive(link.href) ? "page" : undefined}
+                        aria-current={
+                          isActive(link.href) ? "page" : undefined
+                        }
                         className={`block rounded-lg px-3 py-2 text-sm font-medium ${
                           isActive(link.href)
                             ? "bg-surface text-primary"
@@ -216,6 +320,7 @@ export default function Navbar() {
             </div>
           </nav>
 
+          {/* Desktop search and authentication */}
           <div className="hidden shrink-0 items-center gap-3 xl:flex">
             <Link
               href="/search"
@@ -224,20 +329,28 @@ export default function Navbar() {
             >
               <SearchIcon />
             </Link>
+
             <span aria-hidden="true" className="h-6 w-px bg-line" />
+
             <AuthButton />
           </div>
 
-          {/* Animated mobile/tablet hamburger */}
+          {/* Mobile/tablet hamburger */}
           <button
             type="button"
             className="menu-trigger inline-flex h-11 w-11 items-center justify-center rounded-xl border border-line bg-surface/70 text-secondary transition-all hover:border-primary hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary xl:hidden"
-            aria-label={mobileOpen ? "Close navigation menu" : "Open navigation menu"}
+            aria-label={
+              mobileOpen ? "Close navigation menu" : "Open navigation menu"
+            }
             aria-expanded={mobileOpen}
             aria-controls="mobile-nav"
             onClick={() => setMobileOpen((open) => !open)}
           >
-            <span className={`menu-trigger-lines ${mobileOpen ? "is-open" : ""}`}>
+            <span
+              className={`menu-trigger-lines ${
+                mobileOpen ? "is-open" : ""
+              }`}
+            >
               <span />
               <span />
               <span />
@@ -248,15 +361,15 @@ export default function Navbar() {
 
       {/*
         Mobile/tablet navigation drawer.
-        Rendered into <body> instead of inside the header. The header uses
-        backdrop-filter, which makes "position: fixed" children stick to the
-        header instead of the screen. Outside the header the menu is pinned
-        to the full screen, and its parked position no longer widens the page.
+        Rendered into body so fixed positioning works independently
+        of the header's backdrop-filter.
       */}
       {mounted &&
         createPortal(
           <div
-            className={`mobile-menu-overlay xl:hidden ${mobileOpen ? "is-open" : ""}`}
+            className={`mobile-menu-overlay xl:hidden ${
+              mobileOpen ? "is-open" : ""
+            }`}
             aria-hidden={!mobileOpen}
             onClick={() => setMobileOpen(false)}
           >
@@ -265,7 +378,9 @@ export default function Navbar() {
               role="dialog"
               aria-modal="true"
               aria-label="Website navigation"
-              className={`mobile-menu-drawer ${mobileOpen ? "is-open" : ""}`}
+              className={`mobile-menu-drawer ${
+                mobileOpen ? "is-open" : ""
+              }`}
               onClick={(event) => event.stopPropagation()}
               inert={!mobileOpen}
             >
@@ -282,6 +397,7 @@ export default function Navbar() {
                     height={46}
                     className="h-11 w-11 rounded-full object-cover"
                   />
+
                   <span className="font-heading text-base font-bold text-white">
                     BioCode <span className="text-cyan-300">Innovators</span>
                   </span>
@@ -293,52 +409,72 @@ export default function Navbar() {
                   aria-label="Close navigation"
                   className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/15 text-white/80 transition hover:border-cyan-300 hover:text-cyan-300"
                 >
-                  <svg viewBox="0 0 24 24" width="21" height="21"
-                    fill="none" stroke="currentColor" strokeWidth="2"
-                    strokeLinecap="round" aria-hidden="true">
+                  <svg
+                    viewBox="0 0 24 24"
+                    width="21"
+                    height="21"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    aria-hidden="true"
+                  >
                     <path d="M6 6l12 12M18 6L6 18" />
                   </svg>
                 </button>
               </div>
 
-              <div className="mobile-menu-heading">
-                <span>EXPLORE BIOCODE</span>
-                <span className="mobile-menu-heading-line" />
-              </div>
-
-              <nav aria-label="Mobile main navigation" className="mobile-menu-links">
-                {allLinks.map((link, index) => {
-                  const active = isActive(link.href);
-
-                  return (
-                    <Link
-                      key={link.href}
-                      href={link.href}
-                      aria-current={active ? "page" : undefined}
-                      onClick={() => setMobileOpen(false)}
-                      style={{ animationDelay: `${index * 35}ms` }}
-                      className={`mobile-menu-link ${active ? "active" : ""}`}
+              <nav
+                aria-label="Mobile main navigation"
+                className="mobile-menu-links"
+              >
+                {visibleMobileGroups.map((group, groupIndex) => (
+                  <div
+                    key={group.title}
+                    role="group"
+                    aria-labelledby={`mobile-group-${groupIndex}`}
+                    className="mobile-menu-group"
+                  >
+                    <p
+                      id={`mobile-group-${groupIndex}`}
+                      className="mobile-menu-group-title"
                     >
-                      <span className="mobile-menu-link-icon">
-                        <NavIcon index={index} />
-                      </span>
-                      <span>{link.label}</span>
-                      <svg
-                        className="mobile-menu-arrow"
-                        viewBox="0 0 24 24"
-                        width="17"
-                        height="17"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="1.8"
-                        strokeLinecap="round"
-                        aria-hidden="true"
-                      >
-                        <path d="M5 12h14m-6-6 6 6-6 6" />
-                      </svg>
-                    </Link>
-                  );
-                })}
+                      {group.title}
+                    </p>
+
+                    {group.links.map((link, linkIndex) => {
+                      const active = isActive(link.href);
+                      const Icon = link.icon;
+
+                      return (
+                        <Link
+                          key={link.href}
+                          href={link.href}
+                          aria-current={active ? "page" : undefined}
+                          onClick={() => setMobileOpen(false)}
+                          style={{
+                            animationDelay: `${
+                              (groupStarts[groupIndex] + linkIndex) * 35
+                            }ms`,
+                          }}
+                          className={`mobile-menu-link ${
+                            active ? "active" : ""
+                          }`}
+                        >
+                          <span className="mobile-menu-link-icon">
+                            <Icon
+                              size={19}
+                              strokeWidth={1.7}
+                              aria-hidden="true"
+                            />
+                          </span>
+
+                          <span>{link.label}</span>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                ))}
               </nav>
 
               <div className="mobile-menu-bottom">
@@ -352,7 +488,10 @@ export default function Navbar() {
                 </Link>
 
                 <div className="mobile-menu-auth">
-                  <AuthButton stacked onNavigate={() => setMobileOpen(false)} />
+                  <AuthButton
+                    stacked
+                    onNavigate={() => setMobileOpen(false)}
+                  />
                 </div>
 
                 <p className="mobile-menu-tagline">

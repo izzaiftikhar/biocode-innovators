@@ -10,8 +10,12 @@ type CookieToSet = {
 
 export async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname;
+
   const isProtected =
-    path.startsWith("/dashboard") || path.startsWith("/admin");
+    path.startsWith("/dashboard") ||
+    path.startsWith("/admin") ||
+    path === "/profile" ||
+    path.startsWith("/profile/");
 
   const isTeamManagement =
     path === "/admin/team" || path.startsWith("/admin/team/");
@@ -71,6 +75,7 @@ export async function middleware(request: NextRequest) {
 
     const userRoles = (roles ?? []).map((item) => item.role);
     const isAdmin = userRoles.includes("admin");
+
     const canManageTeam =
       isAdmin ||
       userRoles.includes("research_member") ||
@@ -93,5 +98,10 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/admin/:path*", "/login"],
+  matcher: [
+    "/dashboard/:path*",
+    "/admin/:path*",
+    "/profile/:path*",
+    "/login",
+  ],
 };

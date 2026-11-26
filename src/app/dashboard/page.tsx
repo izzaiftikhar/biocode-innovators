@@ -89,6 +89,17 @@ export default async function Dashboard() {
       />
 
       <section className="container-page py-14">
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-4 rounded-xl border border-line bg-bg p-5">
+  <div>
+    <h2 className="font-semibold">Your account</h2>
+    <p className="mt-1 text-sm text-muted">
+      Update your personal details and profile photo.
+    </p>
+  </div>
+  <Link href="/profile" className="btn-outline">
+    Edit profile
+  </Link>
+</div>
         <div className="mb-6 flex flex-wrap items-center justify-between gap-4 rounded-xl border border-teal-100 bg-teal-50/50 p-5">
   <div>
     <h2 className="font-semibold text-slate-900">
