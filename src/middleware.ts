@@ -61,6 +61,23 @@ export async function middleware(request: NextRequest) {
     return toLogin();
   }
 
+  const needsFollow =
+  path.startsWith("/dashboard") ||
+  path === "/profile" ||
+  path.startsWith("/profile/");
+
+if (user && needsFollow) {
+  const { data: follow } = await supabase
+    .from("social_follow")
+    .select("completed_at")
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  if (!follow?.completed_at) {
+    return NextResponse.redirect(new URL("/follow-us", request.url));
+  }
+}
+
   if (path.startsWith("/admin") && user) {
     const { data: roles, error } = await supabase
       .from("user_roles")
@@ -103,5 +120,6 @@ export const config = {
     "/admin/:path*",
     "/profile/:path*",
     "/login",
+    "/follow-us",
   ],
 };
