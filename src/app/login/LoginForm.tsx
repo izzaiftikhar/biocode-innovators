@@ -28,8 +28,18 @@ export default function LoginForm() {
   const [show, setShow] = useState(false);
   const [password, setPassword] = useState("");
   const [msg, setMsg] = useState<Msg>(
-    params.get("error") === "link" ? { kind: "error", text: "That link is invalid or has expired. Please try again." } : null
-  );
+  params.get("error") === "link"
+    ? {
+        kind: "error",
+        text: "That link is invalid or has expired. Please try again.",
+      }
+    : params.get("password") === "updated"
+      ? {
+          kind: "info",
+          text: "Your password has been updated successfully. Please log in with your new password.",
+        }
+      : null
+);
   const [unconfirmedEmail, setUnconfirmedEmail] = useState<string | null>(null);
 
   function switchMode(m: "login" | "register") {

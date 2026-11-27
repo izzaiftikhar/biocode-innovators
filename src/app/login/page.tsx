@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createBrowserSupabase } from "@/lib/supabase/client";
 
@@ -155,6 +156,16 @@ export default function Login() {
             <Input id="password" name="password" type={show ? "text" : "password"} label="Password" icon={paths.lock}
               autoComplete={isLogin ? "current-password" : "new-password"} minLength={8}
               value={password} onChange={setPassword} trailing={toggle} />
+              {isLogin && (
+  <div className="-mt-3 flex justify-end">
+    <Link
+      href="/forgot-password"
+      className="text-sm font-semibold text-primary hover:underline underline-offset-4"
+    >
+      Forgot password?
+    </Link>
+  </div>
+)}
 
             {!isLogin && (
               <>
