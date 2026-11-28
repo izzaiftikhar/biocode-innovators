@@ -18,6 +18,9 @@ import CourseOutline from "./CourseOutline";
 import EnrolButton from "./EnrolButton";
 import CertificateRequest from "@/app/dashboard/CertificateRequest";
 
+export const dynamic = "force-dynamic";
+export const fetchCache = "force-no-store";
+
 function getPublicSupabase() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
