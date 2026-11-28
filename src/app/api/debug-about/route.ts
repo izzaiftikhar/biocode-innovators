@@ -12,7 +12,7 @@ export async function GET() {
     .maybeSingle();
 
   return NextResponse.json({
-    supabaseHost: new URL(process.env.NEXT_PUBLIC_SUPABASE_URL).host,
+    supabaseHost: new URL(process.env.NEXT_PUBLIC_SUPABASE_URL!).host,
     row: data,
     error: error ? error.message : null,
   });
