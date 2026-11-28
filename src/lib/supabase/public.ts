@@ -1,5 +1,4 @@
-
-import { createClient } from "@supabase/supabase-js";
+﻿import { createClient } from "@supabase/supabase-js";
 
 export function createPublicSupabase() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -13,6 +12,10 @@ export function createPublicSupabase() {
     auth: {
       persistSession: false,
       autoRefreshToken: false,
+    },
+    global: {
+      // Next.js caches fetch() responses; always read fresh data instead.
+      fetch: (input, init) => fetch(input, { ...init, cache: "no-store" }),
     },
   });
 }
